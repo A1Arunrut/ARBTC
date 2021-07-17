@@ -1,88 +1,85 @@
-# ARbtc Wallet
+# Esplora - Electrs backend API
 
-An Arunrut Bitcoin (ARbtc) wallet that allows you to store, send ARbtc, receive ARbtc with focus on security and simplicity.
+A block chain index engine and HTTP API written in Rust based on [romanz/electrs](https://github.com/romanz/electrs).
 
-ARbtc is an experimental currency based on Bitcoin. The aim is to reduce the environmental impact of mining using low-energy miners.
+Used as the backend for the [Esplora block explorer](https://github.com/Blockstream/esplora) powering [blockstream.info](https://blockstream.info/).
 
-Soon on Google Play.
+API documentation [is available here](https://github.com/blockstream/esplora/blob/master/API.md).
 
-* Private keys never leave your device
-* SegWit-first. Replace-By-Fee support
-* Encryption. Plausible deniability
+Documentation for the database schema and indexing process [is available here](doc/schema.md).
 
-## BUILD & RUN IT
+### Installing & indexing
 
-Please refer to the engines field in package.json file for the minimum required versions of Node and npm. It is preferred that you use an even-numbered version of Node as these are LTS versions.
-
-To view the version of Node and npm in your environment, run the following in your console:
-
-```
-node --version && npm --version
-```
-
-* In your console:
-
-```
-git clone https://github.com/BlueWallet/BlueWallet.git
-cd BlueWallet
-npm install
-```
-
-Please make sure that your console is running the most stable versions of npm and node (even-numbered versions).
-
-* To run on Android:
-
-You will now need to either connect an Android device to your computer or run an emulated Android device using AVD Manager which comes shipped with Android Studio. To run an emulator using AVD Manager:
-
-1. Download and run Android Studio
-2. Click on "Open an existing Android Studio Project"
-3. Open `build.gradle` file under `ARbtc-blueWallet/android/` folder
-4. Android Studio will take some time to set things up. Once everything is set up, go to `Tools` -> `AVD Manager`.
-    * 📝 This option [may take some time to appear in the menu](https://stackoverflow.com/questions/47173708/why-avd-manager-options-are-not-showing-in-android-studio) if you're opening the project in a freshly-installed version of Android Studio.
-5. Click on "Create Virtual Device..." and go through the steps to create a virtual device
-6. Launch your newly created virtual device by clicking the `Play` button under `Actions` column
-
-Once you connected an Android device or launched an emulator, run this:
-
-```
-npx react-native run-android
-```
-
-The above command will build the app and install it. Once you launch the app it will take some time for all of the dependencies to load. Once everything loads up, you should have the built app running.
-
-* To run on iOS:
-
-```
-npx pod-install
-npm start
-```
-
-In another terminal window within the BlueWallet folder:
-```
-npx react-native run-ios
-```
-
-* To run on macOS using Mac Catalyst:
-
-```
-npm run maccatalystpatches
-```
-
-Once the patches are applied, open Xcode and select "My Mac" as destination. If you are running macOS Catalina, you may need to remove all iOS 14 Widget targets.
-
-
-## TESTS
+Install Rust, Bitcoin Core (no `txindex` needed) and the `clang` and `cmake` packages, then:
 
 ```bash
-npm run test
+$ git clone https://github.com/blockstream/electrs && cd electrs
+$ git checkout new-index
+$ cargo run --release --bin electrs -- -vvvv --daemon-dir ~/.bitcoin
+
+# Or for liquid:
+$ cargo run --features liquid --release --bin electrs -- -vvvv --network liquid --daemon-dir ~/.liquid
 ```
 
-## LICENSE
+See [electrs's original documentation](https://github.com/romanz/electrs/blob/master/doc/usage.md) for more detailed instructions.
+Note that our indexes are incompatible with electrs's and has to be created separately.
+
+The indexes require 610GB of storage after running compaction (as of June 2020), but you'll need to have
+free space of about double that available during the index compaction process.
+Creating the indexes should take a few hours on a beefy machine with SSD.
+
+To deploy with Docker, follow the [instructions here](https://github.com/Blockstream/esplora#how-to-build-the-docker-image).
+
+### Light mode
+
+For personal or low-volume use, you may set `--lightmode` to reduce disk storage requirements
+by roughly 50% at the cost of slower and more expensive lookups.
+
+With this option set, raw transactions and metadata associated with blocks will not be kept in rocksdb
+(the `T`, `X` and `M` indexes),
+but instead queried from bitcoind on demand.
+
+### Notable changes from Electrs:
+
+- HTTP REST API in addition to the Electrum JSON-RPC protocol, with extended transaction information
+  (previous outputs, spending transactions, script asm and more).
+
+- Extended indexes and database storage for improved performance under high load:
+
+  - A full transaction store mapping txids to raw transactions is kept in the database under the prefix `t`.
+  - An index of all spendable transaction outputs is kept under the prefix `O`.
+  - An index of all addresses (encoded as string) is kept under the prefix `a` to enable by-prefix address search.
+  - A map of blockhash to txids is kept in the database under the prefix `X`.
+  - Block stats metadata (number of transactions, size and weight) is kept in the database under the prefix `M`.
+
+  With these new indexes, bitcoind is no longer queried to serve user requests and is only polled
+  periodically for new blocks and for syncing the mempool.
+
+- Support for Liquid and other Elements-based networks, including CT, peg-in/out and multi-asset.
+  (requires enabling the `liquid` feature flag using `--features liquid`)
+
+### CLI options
+
+In addition to electrs's original configuration options, a few new options are also available:
+
+- `--http-addr <addr:port>` - HTTP server address/port to listen on (default: `127.0.0.1:3000`).
+- `--lightmode` - enable light mode (see above)
+- `--cors <origins>` - origins allowed to make cross-site request (optional, defaults to none).
+- `--address-search` - enables the by-prefix address search index.
+- `--index-unspendables` - enables indexing of provably unspendable outputs.
+- `--utxos-limit <num>` - maximum number of utxos to return per address.
+- `--electrum-txs-limit <num>` - maximum number of txs to return per address in the electrum server (does not apply for the http api).
+- `--electrum-banner <text>` - welcome banner text for electrum server.
+
+Additional options with the `liquid` feature:
+- `--parent-network <network>` - the parent network this chain is pegged to.
+
+Additional options with the `electrum-discovery` feature:
+- `--electrum-hosts <json>` - a json map of the public hosts where the electrum server is reachable, in the [`server.features` format](https://electrumx.readthedocs.io/en/latest/protocol-methods.html#server.features).
+- `--electrum-announce` - announce the electrum server on the electrum p2p server discovery network.
+
+See `$ cargo run --release --bin electrs -- --help` for the full list of options.
+
+## License
 
 MIT
-
-## RESPONSIBLE DISCLOSURE
-
-The code is based on [bluewallet.io](https://bluewallet.io).
-Found critical bugs/vulnerabilities? Please submit an [issue](https://github.com/PoWx-Org/ARbtc-bluewallet/issues).
-Thanks!
