@@ -1,9 +1,9 @@
 ARbtc Miner
 ==========
 
-ARbtc-miner is a fork supporting ARbtc (Optical Bitcoin) network.
-ARbtc is an experimental currency based on Bitcoin. See more on
-https://powx.org.
+ARbtc-miner is a fork supporting obtc (Optical Bitcoin) network.
+ARbtc is an experimental currency based on Bitcoin. 
+
 
 ARbtc-miner is based on cpuminer-opt, a fork of cpuminer-multi by TPruvot with optimizations
 imported from other miners developped by lucas Jones, djm34, Wolf0, pooler,
@@ -20,10 +20,6 @@ miners. The source code is open for anyone to inspect. If you don't trust
 the software, don't use it.
 
 
-Bitcointalk threads:
-
-* https://bitcointalk.org/index.php?topic=5226770.msg53865575#msg53865575
-* https://bitcointalk.org/index.php?topic=1326803.0
 
 
 See file RELEASE_NOTES for change log and INSTALL_LINUX or INSTALL_WINDOWS
@@ -66,7 +62,7 @@ Bugs
 ----
 
 Users are encouraged to post their bug reports using Github issues:
-https://github.com/PoWx-Org/ARbtc-miner/issues
+https://github.com/ARbtc-miner/issues
 
 All problem reports must be accompanied by a proper problem definition.
 This should include how the problem occurred, the command line and
