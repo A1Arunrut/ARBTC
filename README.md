@@ -62,7 +62,7 @@ Bugs
 ----
 
 Users are encouraged to post their bug reports using Github issues:
-https://github.com/A1Arunrut/ARbtc-miner/issues
+https://github.com/A1Arunrut/ARBTC-miner/issues
 
 All problem reports must be accompanied by a proper problem definition.
 This should include how the problem occurred, the command line and
