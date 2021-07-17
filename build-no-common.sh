@@ -19,7 +19,7 @@ rm -f config.status
 #extracflags="$extracflags -Ofast -flto -fuse-linker-plugin -ftree-loop-if-convert-stores"
 
 #CFLAGS="-O3 -march=native -Wall" ./configure --with-curl --with-crypto=$HOME/usr
-CFLAGS="-O3 -march=native -Wall" ./configure --with-curl
+CFLAGS="-O3 -march=native -Wall -fno-common" ./configure --with-curl
 #CFLAGS="-O3 -march=native -Wall" CXXFLAGS="$CFLAGS -std=gnu++11" ./configure --with-curl
 
 make -j 4
