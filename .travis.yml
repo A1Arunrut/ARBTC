@@ -1,16 +1,7 @@
-language: rust
-
-rust:
-  - stable
-
-cache: cargo
-
-before_script:
-  - rustup component add rustfmt-preview
+sudo: required
+services:
+    - docker
 
 script:
-  - cargo fmt --all -- --check
-  - cargo check --all
-  - cargo build --all
-  - cargo test --all
-  - cargo build --features "liquid" --all
+  - docker build -t blockstream/esplora-base -f Dockerfile.deps .
+  - docker build .

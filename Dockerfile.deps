@@ -1,0 +1,49 @@
+FROM debian:buster@sha256:e2cc6fb403be437ef8af68bdc3a89fd58e80b4e390c58f14c77c466002391193
+
+SHELL ["/bin/bash", "-c"]
+
+RUN mkdir -p /srv/explorer \
+ && apt-get -yqq update \
+ && apt-get -yqq upgrade \
+ && apt-get -yqq install clang cmake curl git tor
+
+RUN git clone --quiet --depth 1 --single-branch --branch v0.33.11 https://github.com/creationix/nvm.git /root/.nvm \
+ && rm -rf /root/.nvm/.git \
+ && source /root/.nvm/nvm.sh \
+ && nvm install v12.16.1
+
+ENV SHA256SUM_BITCOINCORE=376194f06596ecfa40331167c39bc70c355f960280bd2a645fdbf18f66527397
+RUN curl -sL -o bitcoin.tar.gz https://bitcoincore.org/bin/bitcoin-core-0.20.1/bitcoin-0.20.1-x86_64-linux-gnu.tar.gz \
+ && echo "${SHA256SUM_BITCOINCORE}  bitcoin.tar.gz" | sha256sum --check \
+ && tar xzf bitcoin.tar.gz -C /srv/explorer \
+ && ln -s /srv/explorer/bitcoin-0.20.1 /srv/explorer/bitcoin \
+ && rm bitcoin.tar.gz
+
+ENV SHA256SUM_ELEMENTS=52f1993efdc52b1b9779040812bc622580c1240282e6cfc95a0d3333deaa2a2c
+RUN curl -sL -o elements.tar.gz https://github.com/ElementsProject/elements/releases/download/elements-0.18.1.9/elements-0.18.1.9-x86_64-linux-gnu.tar.gz \
+ && echo "${SHA256SUM_ELEMENTS}  elements.tar.gz" | sha256sum --check \
+ && tar xzf elements.tar.gz -C /srv/explorer \
+ && ln -s /srv/explorer/elements-0.18.1.9 /srv/explorer/liquid \
+ && mv /srv/explorer/liquid/bin/{elementsd,liquidd} \
+ && mv /srv/explorer/liquid/bin/{elements-cli,liquid-cli} \
+ && rm elements.tar.gz
+
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.48.0
+RUN source /root/.cargo/env \
+ && mkdir -p /srv/explorer/electrs{,_liquid} \
+ && git clone --no-checkout https://github.com/blockstream/electrs.git \
+ && cd electrs \
+ && git checkout 1cbc86fbfdb5680fea752377bf8f18ed417f0edd \
+ && cp contrib/popular-scripts.txt /srv/explorer \
+ && cargo install --root /srv/explorer/electrs_bitcoin --locked --path . --features electrum-discovery \
+ && cargo install --root /srv/explorer/electrs_liquid --locked --path . --features electrum-discovery,liquid \
+ && cd .. \
+ && rm -fr /root/.cargo electrs \
+ && strip /srv/explorer/electrs_*/bin/electrs
+
+
+# cleanup
+RUN apt-get --auto-remove remove -yqq --purge clang cmake manpages curl git \
+ && apt-get clean \
+ && apt-get autoclean \
+ && rm -rf /usr/share/doc* /usr/share/man /usr/share/postgresql/*/man /var/lib/apt/lists/* /var/cache/* /tmp/* /root/.cache /*.deb /root/.cargo
